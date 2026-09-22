@@ -38,23 +38,38 @@ public final class PdfReport {
         cv.drawText("التاريخ: " + dt,555,y,p); y+=32;
 
         p.setFakeBoldText(true);
-        cv.drawText("الفرق",555,y,p); cv.drawText("في الحساب",450,y,p); cv.drawText("الفعلي",335,y,p); cv.drawText("التمتير",225,y,p); cv.drawText("الخزان",120,y,p);
+        cv.drawText("الفعلي",555,y,p); cv.drawText("التمتير",350,y,p); cv.drawText("الخزان",165,y,p);
         y+=12; cv.drawLine(40,y,555,y,p); y+=24; p.setFakeBoldText(false);
         for(int i=0;i<4;i++){
             int n=i+1;
             long h=Math.round(c.getDouble(c.getColumnIndexOrThrow("t"+n+"_h")));
             long a=Math.round(c.getDouble(c.getColumnIndexOrThrow("t"+n+"_actual")));
-            long b=Math.round(c.getDouble(c.getColumnIndexOrThrow("t"+n+"_book")));
-            long d=Math.round(c.getDouble(c.getColumnIndexOrThrow("t"+n+"_diff")));
-            cv.drawText(String.valueOf(d),555,y,p); cv.drawText(String.valueOf(b),450,y,p); cv.drawText(String.valueOf(a),335,y,p); cv.drawText(String.valueOf(h),225,y,p); cv.drawText(tanks.get(i).name,120,y,p);
+            cv.drawText(String.valueOf(a),555,y,p);
+            cv.drawText(String.valueOf(h),350,y,p);
+            cv.drawText(tanks.get(i).name,165,y,p);
             y+=30;
         }
 
-        y+=15; p.setFakeBoldText(true); p.setTextSize(15);
+        y+=18;
+        double dieselActual=c.getDouble(c.getColumnIndexOrThrow("diesel_actual"));
+        double dieselBook=c.getDouble(c.getColumnIndexOrThrow("diesel_book"));
         double dd=c.getDouble(c.getColumnIndexOrThrow("diesel_diff"));
+        double petrolActual=c.getDouble(c.getColumnIndexOrThrow("petrol_actual"));
+        double petrolBook=c.getDouble(c.getColumnIndexOrThrow("petrol_book"));
         double pd=c.getDouble(c.getColumnIndexOrThrow("petrol_diff"));
-        cv.drawText(status(dd,"الديزل"),555,y,p); y+=28;
-        cv.drawText(status(pd,"البترول"),555,y,p); y+=35;
+
+        p.setFakeBoldText(true); p.setTextSize(15);
+        cv.drawText("ملخص الديزل",555,y,p); y+=26;
+        p.setFakeBoldText(false); p.setTextSize(13);
+        cv.drawText("الإجمالي الفعلي: "+Math.round(dieselActual)+" لتر",555,y,p); y+=22;
+        cv.drawText("الرصيد في الحساب: "+Math.round(dieselBook)+" لتر",555,y,p); y+=22;
+        p.setFakeBoldText(true); cv.drawText(status(dd,"الديزل"),555,y,p); y+=32;
+
+        cv.drawText("ملخص البترول",555,y,p); y+=26;
+        p.setFakeBoldText(false);
+        cv.drawText("الإجمالي الفعلي: "+Math.round(petrolActual)+" لتر",555,y,p); y+=22;
+        cv.drawText("الرصيد في الحساب: "+Math.round(petrolBook)+" لتر",555,y,p); y+=22;
+        p.setFakeBoldText(true); cv.drawText(status(pd,"البترول"),555,y,p); y+=35;
 
         p.setFakeBoldText(false); p.setTextSize(13);
         String notes=c.getString(c.getColumnIndexOrThrow("notes"));
