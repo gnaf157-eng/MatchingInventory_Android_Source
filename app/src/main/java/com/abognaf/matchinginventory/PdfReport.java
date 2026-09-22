@@ -33,7 +33,11 @@ public final class PdfReport {
         y+=32;
         p.setTextSize(18); cv.drawText("تقرير مطابقة الجرد",555,y,p);
         y+=30; p.setFakeBoldText(false); p.setTextSize(13);
-        String dt = new SimpleDateFormat("yyyy/MM/dd HH:mm",Locale.getDefault()).format(new Date(c.getLong(c.getColumnIndexOrThrow("created_at"))));
+        long auditId=c.getLong(c.getColumnIndexOrThrow("id"));
+        long createdAt=c.getLong(c.getColumnIndexOrThrow("created_at"));
+        String dt = new SimpleDateFormat("yyyy/MM/dd HH:mm",Locale.getDefault()).format(new Date(createdAt));
+        String auditNo="JRD-"+new SimpleDateFormat("yyyyMMdd",Locale.US).format(new Date(createdAt))+"-"+String.format(Locale.US,"%03d",auditId);
+        cv.drawText("رقم الجرد: " + auditNo,555,y,p); y+=24;
         cv.drawText("التاريخ: " + dt,555,y,p); y+=32;
 
         double dieselBook=c.getDouble(c.getColumnIndexOrThrow("diesel_book"));
