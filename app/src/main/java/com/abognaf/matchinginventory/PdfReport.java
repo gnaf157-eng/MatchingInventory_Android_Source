@@ -4,7 +4,6 @@ import android.content.*;
 import android.database.Cursor;
 import android.graphics.*;
 import android.graphics.pdf.PdfDocument;
-import android.net.Uri;
 import java.io.*;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -19,7 +18,7 @@ public final class PdfReport {
         return fuel + " مطابق";
     }
 
-    public static void writeAudit(Context ctx, OutputStream out, Cursor c, java.util.List<Tank> tanks, String stationName) throws IOException {
+    public static void writeAudit(Context ctx, OutputStream out, Cursor c, Cursor items, java.util.List<Tank> legacyTanks, String stationName) throws IOException {
         if (!c.moveToFirst()) return;
         PdfDocument pdf = new PdfDocument();
         PdfDocument.Page page = pdf.startPage(new PdfDocument.PageInfo.Builder(595,842,1).create());
@@ -43,34 +42,32 @@ public final class PdfReport {
         double pd=c.getDouble(c.getColumnIndexOrThrow("petrol_diff"));
 
         p.setFakeBoldText(true);
-        cv.drawText("الفرق",555,y,p); cv.drawText("في الحساب",450,y,p); cv.drawText("الفعلي",335,y,p); cv.drawText("التمتير",225,y,p); cv.drawText("الخزان",120,y,p);
+        cv.drawText("الفعلي",555,y,p); cv.drawText("التمتير",350,y,p); cv.drawText("الخزان",165,y,p);
         y+=12; cv.drawLine(40,y,555,y,p); y+=24; p.setFakeBoldText(false);
-        for(int i=0;i<4;i++){
-            int n=i+1;
-            long h=Math.round(c.getDouble(c.getColumnIndexOrThrow("t"+n+"_h")));
-            long a=Math.round(c.getDouble(c.getColumnIndexOrThrow("t"+n+"_actual")));
 
-            String bookText="";
-            String diffText="";
-            if(i==0){
-                bookText=String.valueOf(Math.round(dieselBook));
-                diffText=String.valueOf(Math.round(dd));
-            }else if(i==3){
-                bookText=String.valueOf(Math.round(petrolBook));
-                diffText=String.valueOf(Math.round(pd));
+        if(items!=null && items.getCount()>0){
+            while(items.moveToNext()){
+                if(y>720){ pdf.finishPage(page); page=pdf.startPage(new PdfDocument.PageInfo.Builder(595,842,2).create()); cv=page.getCanvas(); y=60; }
+                cv.drawText(String.valueOf(Math.round(items.getDouble(5))),555,y,p);
+                cv.drawText(String.valueOf(Math.round(items.getDouble(4))),350,y,p);
+                cv.drawText(items.getString(0),165,y,p);
+                y+=28;
             }
-
-            cv.drawText(diffText,555,y,p);
-            cv.drawText(bookText,450,y,p);
-            cv.drawText(String.valueOf(a),335,y,p);
-            cv.drawText(String.valueOf(h),225,y,p);
-            cv.drawText(tanks.get(i).name,120,y,p);
-            y+=30;
+        }else{
+            for(int i=0;i<4 && i<legacyTanks.size();i++){
+                int n=i+1;
+                cv.drawText(String.valueOf(Math.round(c.getDouble(c.getColumnIndexOrThrow("t"+n+"_actual")))),555,y,p);
+                cv.drawText(String.valueOf(Math.round(c.getDouble(c.getColumnIndexOrThrow("t"+n+"_h")))),350,y,p);
+                cv.drawText(legacyTanks.get(i).name,165,y,p);
+                y+=28;
+            }
         }
 
-        y+=18; p.setFakeBoldText(true); p.setTextSize(15);
+        y+=18; p.setFakeBoldText(true); p.setTextSize(14);
+        cv.drawText("إجمالي رصيد الديزل في الحساب: "+Math.round(dieselBook)+" لتر",555,y,p); y+=24;
         cv.drawText(status(dd,"الديزل"),555,y,p); y+=28;
-        cv.drawText(status(pd,"البترول"),555,y,p); y+=35;
+        cv.drawText("إجمالي رصيد البترول في الحساب: "+Math.round(petrolBook)+" لتر",555,y,p); y+=24;
+        cv.drawText(status(pd,"البترول"),555,y,p); y+=32;
 
         p.setFakeBoldText(false); p.setTextSize(13);
         String notes=c.getString(c.getColumnIndexOrThrow("notes"));
@@ -94,22 +91,18 @@ public final class PdfReport {
         double sumDiesel=0,sumPetrol=0; int count=0;
         while(cur.moveToNext()){
             if(y>790){
-                pdf.finishPage(page);
-                pageNo++; y=60;
-                page=pdf.startPage(new PdfDocument.PageInfo.Builder(595,842,pageNo).create());
-                cv=page.getCanvas();
+                pdf.finishPage(page); pageNo++; y=60;
+                page=pdf.startPage(new PdfDocument.PageInfo.Builder(595,842,pageNo).create()); cv=page.getCanvas();
             }
             long ts=cur.getLong(1); double dd=cur.getDouble(2), pd=cur.getDouble(3);
             sumDiesel+=dd; sumPetrol+=pd; count++;
             String dt=new SimpleDateFormat("yyyy/MM/dd HH:mm",Locale.getDefault()).format(new Date(ts));
-            cv.drawText(dt+"   ديزل: "+Math.round(dd)+"   بترول: "+Math.round(pd),555,y,p);
-            y+=24;
+            cv.drawText(dt+"   ديزل: "+Math.round(dd)+"   بترول: "+Math.round(pd),555,y,p); y+=24;
         }
         y+=20; p.setFakeBoldText(true); p.setTextSize(14);
         cv.drawText("عدد الجردات: "+count,555,y,p); y+=26;
         cv.drawText("صافي فرق الديزل: "+Math.round(sumDiesel)+" لتر",555,y,p); y+=26;
         cv.drawText("صافي فرق البترول: "+Math.round(sumPetrol)+" لتر",555,y,p);
-        pdf.finishPage(page);
-        pdf.writeTo(out); pdf.close();
+        pdf.finishPage(page); pdf.writeTo(out); pdf.close();
     }
 }
