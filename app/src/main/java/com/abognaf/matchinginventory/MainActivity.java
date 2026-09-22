@@ -19,9 +19,8 @@ public class MainActivity extends Activity {
     LinearLayout page, bottom;
     List<Tank> tanks;
     EditText[] h = new EditText[4];
-    EditText[] book = new EditText[4];
+    EditText dieselBook, petrolBook;
     TextView[] actual = new TextView[4];
-    TextView[] diff = new TextView[4];
     TextView summary;
     EditText notes;
     long exportAuditId = -1;
@@ -94,10 +93,8 @@ public class MainActivity extends Activity {
             TextView dims=new TextView(this); dims.setGravity(Gravity.RIGHT); dims.setText("الطول "+fmt(t.lengthCm)+" سم  |  القطر "+fmt(t.diameterCm)+" سم");
             card.addView(dims);
             h[i]=input("التمتير بالسنتيمتر");
-            book[i]=input("الرصيد في الحساب باللتر");
             actual[i]=new TextView(this); actual[i].setGravity(Gravity.RIGHT); actual[i].setTextSize(16); actual[i].setText("الكمية الفعلية: —");
-            diff[i]=new TextView(this); diff[i].setGravity(Gravity.RIGHT); diff[i].setTextSize(17); diff[i].setText("الفرق: —");
-            card.addView(h[i]); card.addView(book[i]); card.addView(actual[i]); card.addView(diff[i]);
+            card.addView(h[i]); card.addView(actual[i]);
             Button recalc=btn("إعادة حساب هذا الخزان");
             recalc.setOnClickListener(v->recalcOne(idx,true)); card.addView(recalc);
             android.text.TextWatcher w=new android.text.TextWatcher(){
@@ -105,48 +102,60 @@ public class MainActivity extends Activity {
                 public void onTextChanged(CharSequence s,int st,int b,int c){ recalcOne(idx,false); updateSummary(); }
                 public void afterTextChanged(android.text.Editable e){}
             };
-            h[i].addTextChangedListener(w); book[i].addTextChangedListener(w);
+            h[i].addTextChangedListener(w);
             page.addView(card,new LinearLayout.LayoutParams(-1,-2));
         }
+
+        TextView balances=title("الأرصدة الإجمالية في الحساب"); balances.setTextSize(19); page.addView(balances);
+        dieselBook=input("إجمالي رصيد الديزل في الحساب باللتر"); page.addView(dieselBook);
+        petrolBook=input("إجمالي رصيد البترول في الحساب باللتر"); page.addView(petrolBook);
+        android.text.TextWatcher totalWatcher=new android.text.TextWatcher(){
+            public void beforeTextChanged(CharSequence s,int st,int c,int a){}
+            public void onTextChanged(CharSequence s,int st,int b,int c){ updateSummary(); }
+            public void afterTextChanged(android.text.Editable e){}
+        };
+        dieselBook.addTextChangedListener(totalWatcher);
+        petrolBook.addTextChangedListener(totalWatcher);
+
         summary=title("الملخص النهائي سيظهر هنا"); summary.setTextSize(18); page.addView(summary);
         notes=new EditText(this); notes.setHint("ملاحظات عامة (اختيارية)"); notes.setGravity(Gravity.RIGHT); notes.setMinLines(2); page.addView(notes);
         Button save=btn("حفظ الجرد"); save.setOnClickListener(v->saveAudit()); page.addView(save);
     }
 
     boolean recalcOne(int i, boolean warn){
-        if(h[i]==null||book[i]==null) return false;
-        String hs=h[i].getText().toString().trim(), bs=book[i].getText().toString().trim();
-        if(hs.isEmpty()||bs.isEmpty()){ actual[i].setText("الكمية الفعلية: —"); diff[i].setText("الفرق: —"); diff[i].setTextColor(Color.DKGRAY); return false; }
+        if(h[i]==null) return false;
+        String hs=h[i].getText().toString().trim();
+        if(hs.isEmpty()){ actual[i].setText("الكمية الفعلية: —"); return false; }
         try{
-            double hv=Double.parseDouble(hs), bv=Double.parseDouble(bs);
+            double hv=Double.parseDouble(hs);
             Tank t=tanks.get(i);
             if(hv<0 || hv>t.diameterCm){
                 if(warn) toast("التمتير يجب أن يكون بين 0 و "+fmt(t.diameterCm)+" سم");
-                actual[i].setText("الكمية الفعلية: خطأ"); diff[i].setText("الفرق: —"); return false;
+                actual[i].setText("الكمية الفعلية: خطأ"); return false;
             }
             double av=TankMath.liters(t.lengthCm,t.diameterCm,hv);
-            double d=av-bv;
             actual[i].setText("الكمية الفعلية: "+Math.round(av)+" لتر");
-            diff[i].setText("الفرق: "+Math.round(d)+" لتر — "+statusText(d));
-            diff[i].setTextColor(d>0?Color.rgb(20,100,210):d<0?Color.rgb(190,30,30):Color.rgb(20,130,60));
             return true;
         }catch(Exception e){ if(warn) toast("تحقق من الأرقام"); return false; }
     }
 
     void updateSummary(){
-        if(summary==null || tanks==null) return;
-        double da=0,dbk=0,pa=0,pbk=0;
+        if(summary==null || tanks==null || dieselBook==null || petrolBook==null) return;
+        double da=0,pa=0;
         try{
             for(int i=0;i<4;i++){
-                if(h[i]==null||book[i]==null||h[i].getText().toString().trim().isEmpty()||book[i].getText().toString().trim().isEmpty()) return;
-                double hv=Double.parseDouble(h[i].getText().toString()), bv=Double.parseDouble(book[i].getText().toString());
+                if(h[i]==null||h[i].getText().toString().trim().isEmpty()) return;
+                double hv=Double.parseDouble(h[i].getText().toString());
                 if(hv<0||hv>tanks.get(i).diameterCm) return;
                 double av=TankMath.liters(tanks.get(i).lengthCm,tanks.get(i).diameterCm,hv);
-                if(i<3){da+=av; dbk+=bv;} else {pa=av; pbk=bv;}
+                if(i<3) da+=av; else pa=av;
             }
+            if(dieselBook.getText().toString().trim().isEmpty()||petrolBook.getText().toString().trim().isEmpty()) return;
+            double dbk=Double.parseDouble(dieselBook.getText().toString());
+            double pbk=Double.parseDouble(petrolBook.getText().toString());
             double dd=da-dbk,pd=pa-pbk;
-            summary.setText("ملخص الجرد\nإجمالي الديزل الفعلي: "+Math.round(da)+" لتر\nفي الحساب: "+Math.round(dbk)+" لتر\n"+statusFuel(dd,"الديزل")+
-                    "\n\nإجمالي البترول الفعلي: "+Math.round(pa)+" لتر\nفي الحساب: "+Math.round(pbk)+" لتر\n"+statusFuel(pd,"البترول"));
+            summary.setText("ملخص الجرد\nإجمالي الديزل الفعلي: "+Math.round(da)+" لتر\nإجمالي الديزل في الحساب: "+Math.round(dbk)+" لتر\n"+statusFuel(dd,"الديزل")+
+                    "\n\nإجمالي البترول الفعلي: "+Math.round(pa)+" لتر\nإجمالي البترول في الحساب: "+Math.round(pbk)+" لتر\n"+statusFuel(pd,"البترول"));
         }catch(Exception ignored){}
     }
 
@@ -158,16 +167,24 @@ public class MainActivity extends Activity {
     }
 
     void saveAudit(){
-        double[] hv=new double[4],av=new double[4],bv=new double[4];
+        double[] hv=new double[4],av=new double[4];
         for(int i=0;i<4;i++){
-            if(h[i].getText().toString().trim().isEmpty()||book[i].getText().toString().trim().isEmpty()){ toast("يجب إدخال التمتير والرصيد لكل الخزانات"); return; }
+            if(h[i].getText().toString().trim().isEmpty()){ toast("يجب إدخال التمتير لكل الخزانات"); return; }
             try{
-                hv[i]=Double.parseDouble(h[i].getText().toString()); bv[i]=Double.parseDouble(book[i].getText().toString());
-            }catch(Exception e){ toast("تحقق من القيم المدخلة"); return; }
+                hv[i]=Double.parseDouble(h[i].getText().toString());
+            }catch(Exception e){ toast("تحقق من قيم التمتير"); return; }
             if(hv[i]<0||hv[i]>tanks.get(i).diameterCm){ toast("تمتير "+tanks.get(i).name+" أكبر من ارتفاع الخزان"); return; }
             av[i]=TankMath.liters(tanks.get(i).lengthCm,tanks.get(i).diameterCm,hv[i]);
         }
-        db.saveAudit(hv,av,bv,notes.getText().toString().trim());
+        if(dieselBook.getText().toString().trim().isEmpty()||petrolBook.getText().toString().trim().isEmpty()){
+            toast("يجب إدخال إجمالي رصيد الديزل وإجمالي رصيد البترول"); return;
+        }
+        double dieselAccount, petrolAccount;
+        try{
+            dieselAccount=Double.parseDouble(dieselBook.getText().toString());
+            petrolAccount=Double.parseDouble(petrolBook.getText().toString());
+        }catch(Exception e){ toast("تحقق من الأرصدة الإجمالية"); return; }
+        db.saveAudit(hv,av,dieselAccount,petrolAccount,notes.getText().toString().trim());
         new AlertDialog.Builder(this).setTitle("تم الحفظ بنجاح")
             .setMessage("هل تريد بدء جرد جديد ومسح الحقول؟")
             .setPositiveButton("نعم",(d,w)->showAudit())
@@ -213,8 +230,7 @@ public class MainActivity extends Activity {
         TextView info=title(dt); info.setTextSize(16); page.addView(info);
         for(int i=0;i<4;i++){
             int n=i+1; TextView t=new TextView(this); t.setGravity(Gravity.RIGHT); t.setTextSize(17); t.setPadding(12,14,12,14);
-            double d=c.getDouble(c.getColumnIndexOrThrow("t"+n+"_diff"));
-            t.setText(tanks.get(i).name+"\nالتمتير: "+Math.round(c.getDouble(c.getColumnIndexOrThrow("t"+n+"_h")))+" سم | الفعلي: "+Math.round(c.getDouble(c.getColumnIndexOrThrow("t"+n+"_actual")))+" لتر | الحساب: "+Math.round(c.getDouble(c.getColumnIndexOrThrow("t"+n+"_book")))+" لتر | الفرق: "+Math.round(d)+" لتر");
+            t.setText(tanks.get(i).name+"\nالتمتير: "+Math.round(c.getDouble(c.getColumnIndexOrThrow("t"+n+"_h")))+" سم | الكمية الفعلية: "+Math.round(c.getDouble(c.getColumnIndexOrThrow("t"+n+"_actual")))+" لتر");
             page.addView(t);
         }
         double dd=c.getDouble(c.getColumnIndexOrThrow("diesel_diff")),pd=c.getDouble(c.getColumnIndexOrThrow("petrol_diff"));
