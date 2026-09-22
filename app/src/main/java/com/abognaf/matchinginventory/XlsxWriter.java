@@ -37,8 +37,11 @@ public final class XlsxWriter {
 
         StringBuilder rows=new StringBuilder(); int r=1;
         rows.append("<row r=\""+r+"\">").append(c("A"+r,stationName)).append(c("B"+r,"مطابقة الجرد")).append("</row>"); r++;
+        long auditId=cur.getLong(cur.getColumnIndexOrThrow("id"));
         long ts=cur.getLong(cur.getColumnIndexOrThrow("created_at"));
         String dt=new SimpleDateFormat("yyyy/MM/dd HH:mm",Locale.getDefault()).format(new Date(ts));
+        String auditNo="JRD-"+new SimpleDateFormat("yyyyMMdd",Locale.US).format(new Date(ts))+"-"+String.format(Locale.US,"%03d",auditId);
+        rows.append("<row r=\""+r+"\">").append(c("A"+r,"رقم الجرد")).append(c("B"+r,auditNo)).append("</row>"); r++;
         rows.append("<row r=\""+r+"\">").append(c("A"+r,"التاريخ")).append(c("B"+r,dt)).append("</row>"); r++;
         rows.append("<row r=\""+r+"\">").append(c("A"+r,"الخزان")).append(c("B"+r,"النوع")).append(c("C"+r,"التمتير سم")).append(c("D"+r,"الفعلي لتر")).append("</row>"); r++;
 
