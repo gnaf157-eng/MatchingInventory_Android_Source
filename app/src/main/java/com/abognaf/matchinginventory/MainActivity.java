@@ -440,16 +440,51 @@ public class MainActivity extends Activity {
         EditText name=input("اسم الخزان"); name.setInputType(android.text.InputType.TYPE_CLASS_TEXT); name.setText(t.name); card.addView(name);
         Spinner fuel=new Spinner(this); fuel.setAdapter(new ArrayAdapter<>(this,android.R.layout.simple_spinner_dropdown_item,new String[]{"ديزل","بترول"}));
         fuel.setSelection("بترول".equals(t.fuelType)?1:0); card.addView(fuel);
+
+        Spinner mode=new Spinner(this);
+        mode.setAdapter(new ArrayAdapter<>(this,android.R.layout.simple_spinner_dropdown_item,new String[]{"أعرف السعة والارتفاع","أعرف الطول والقطر"}));
+        card.addView(mode);
+
+        EditText capacity=input("سعة الخزان باللتر");
+        double cap=Math.PI*Math.pow(t.diameterCm/2.0,2)*t.lengthCm/1000.0;
+        capacity.setText(String.valueOf(Math.round(cap))); card.addView(capacity);
+
+        EditText height=input("ارتفاع الخزان سم"); height.setText(fmt(t.diameterCm)); card.addView(height);
+
         EditText len=input("الطول سم"); len.setText(fmt(t.lengthCm)); card.addView(len);
         EditText dia=input("القطر سم"); dia.setText(fmt(t.diameterCm)); card.addView(dia);
+
+        Runnable applyMode=()->{
+            boolean byCapacity=mode.getSelectedItemPosition()==0;
+            capacity.setVisibility(byCapacity?View.VISIBLE:View.GONE);
+            height.setVisibility(byCapacity?View.VISIBLE:View.GONE);
+            len.setVisibility(byCapacity?View.GONE:View.VISIBLE);
+            dia.setVisibility(byCapacity?View.GONE:View.VISIBLE);
+        };
+        mode.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener(){
+            public void onItemSelected(android.widget.AdapterView<?> p,View v,int pos,long id){applyMode.run();}
+            public void onNothingSelected(android.widget.AdapterView<?> p){}
+        });
+        applyMode.run();
+
         Button save=ghostBtn("حفظ الخزان"); save.setOnClickListener(v->{
             try{
                 t.name=name.getText().toString().trim(); t.fuelType=(String)fuel.getSelectedItem();
-                t.lengthCm=Double.parseDouble(len.getText().toString()); t.diameterCm=Double.parseDouble(dia.getText().toString());
+                if(mode.getSelectedItemPosition()==0){
+                    double capL=Double.parseDouble(capacity.getText().toString());
+                    double hCm=Double.parseDouble(height.getText().toString());
+                    if(capL<=0||hCm<=0){toast("تحقق من السعة والارتفاع");return;}
+                    t.diameterCm=hCm;
+                    t.lengthCm=derivedLengthCm(capL,hCm);
+                }else{
+                    t.lengthCm=Double.parseDouble(len.getText().toString());
+                    t.diameterCm=Double.parseDouble(dia.getText().toString());
+                }
                 if(t.name.isEmpty()||t.lengthCm<=0||t.diameterCm<=0){toast("تحقق من بيانات الخزان");return;}
                 db.updateTank(t); toast("تم حفظ الخزان"); showSettingsPage();
             }catch(Exception e){toast("تحقق من بيانات الخزان");}
         }); card.addView(save);
+
         Button del=ghostBtn("حذف الخزان"); del.setTextColor(Color.rgb(185,40,40)); del.setOnClickListener(v->
             new AlertDialog.Builder(this).setTitle("حذف الخزان").setMessage("سيتم حذف الخزان من الجرد القادم فقط، ولن تتأثر الجردات السابقة. هل تريد المتابعة؟")
                 .setPositiveButton("حذف",(d,w)->{db.deleteTank(t.id);showSettingsPage();}).setNegativeButton("إلغاء",null).show()
@@ -460,14 +495,54 @@ public class MainActivity extends Activity {
     void showAddTankDialog(){
         LinearLayout box=new LinearLayout(this); box.setOrientation(LinearLayout.VERTICAL); box.setPadding(dp(18),dp(8),dp(18),0);
         EditText name=input("اسم الخزان"); name.setInputType(android.text.InputType.TYPE_CLASS_TEXT); box.addView(name);
+
         Spinner fuel=new Spinner(this); fuel.setAdapter(new ArrayAdapter<>(this,android.R.layout.simple_spinner_dropdown_item,new String[]{"ديزل","بترول"})); box.addView(fuel);
-        EditText len=input("الطول سم"); box.addView(len); EditText dia=input("القطر سم"); box.addView(dia);
+
+        TextView typeInfo=small("شكل الخزان: أسطواني أفقي"); typeInfo.setPadding(0,dp(8),0,dp(8)); box.addView(typeInfo);
+
+        Spinner mode=new Spinner(this);
+        mode.setAdapter(new ArrayAdapter<>(this,android.R.layout.simple_spinner_dropdown_item,new String[]{"أعرف السعة والارتفاع","أعرف الطول والقطر"}));
+        box.addView(mode);
+
+        EditText capacity=input("سعة الخزان باللتر"); box.addView(capacity);
+        EditText height=input("ارتفاع الخزان سم"); box.addView(height);
+        EditText len=input("الطول سم"); box.addView(len);
+        EditText dia=input("القطر سم"); box.addView(dia);
+
+        Runnable applyMode=()->{
+            boolean byCapacity=mode.getSelectedItemPosition()==0;
+            capacity.setVisibility(byCapacity?View.VISIBLE:View.GONE);
+            height.setVisibility(byCapacity?View.VISIBLE:View.GONE);
+            len.setVisibility(byCapacity?View.GONE:View.VISIBLE);
+            dia.setVisibility(byCapacity?View.GONE:View.VISIBLE);
+        };
+        mode.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener(){
+            public void onItemSelected(android.widget.AdapterView<?> p,View v,int pos,long id){applyMode.run();}
+            public void onNothingSelected(android.widget.AdapterView<?> p){}
+        });
+        applyMode.run();
+
         AlertDialog dialog=new AlertDialog.Builder(this).setTitle("إضافة خزان جديد").setView(box).setPositiveButton("إضافة",null).setNegativeButton("إلغاء",null).create();
         dialog.setOnShowListener(x->dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v->{
             try{
-                String n=name.getText().toString().trim(); double l=Double.parseDouble(len.getText().toString()), d=Double.parseDouble(dia.getText().toString());
-                if(n.isEmpty()||l<=0||d<=0){toast("تحقق من بيانات الخزان");return;}
-                db.addTank(n,(String)fuel.getSelectedItem(),l,d); dialog.dismiss(); showSettingsPage();
+                String n=name.getText().toString().trim();
+                if(n.isEmpty()){toast("أدخل اسم الخزان");return;}
+
+                double lengthCm,diameterCm;
+                if(mode.getSelectedItemPosition()==0){
+                    double capL=Double.parseDouble(capacity.getText().toString());
+                    double hCm=Double.parseDouble(height.getText().toString());
+                    if(capL<=0||hCm<=0){toast("تحقق من السعة والارتفاع");return;}
+                    diameterCm=hCm;
+                    lengthCm=derivedLengthCm(capL,hCm);
+                }else{
+                    lengthCm=Double.parseDouble(len.getText().toString());
+                    diameterCm=Double.parseDouble(dia.getText().toString());
+                    if(lengthCm<=0||diameterCm<=0){toast("تحقق من الطول والقطر");return;}
+                }
+
+                db.addTank(n,(String)fuel.getSelectedItem(),lengthCm,diameterCm);
+                dialog.dismiss(); showSettingsPage();
             }catch(Exception e){toast("تحقق من بيانات الخزان");}
         }));
         dialog.show();
@@ -493,6 +568,11 @@ public class MainActivity extends Activity {
                 PdfReport.writePeriod(out,c,station,"تقرير فترة مطابقة الجرد"); c.close(); toast("تم إنشاء تقرير الفترة");
             }
         }catch(Exception e){toast("فشل التصدير: "+e.getMessage());}
+    }
+
+    double derivedLengthCm(double capacityLiters,double heightCm){
+        double r=heightCm/2.0;
+        return (capacityLiters*1000.0)/(Math.PI*r*r);
     }
 
     String auditNumber(long id,long ts){
