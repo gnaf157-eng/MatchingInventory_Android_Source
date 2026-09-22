@@ -219,7 +219,6 @@ public class MainActivity extends Activity {
             h[i]=input("التمتير بالسنتيمتر");
             actual[i]=new TextView(this); actual[i].setGravity(Gravity.RIGHT); actual[i].setTextSize(16); actual[i].setText("الكمية الفعلية: —");
             card.addView(h[i]); card.addView(actual[i]);
-            Button recalc=ghostBtn("حساب الكمية"); recalc.setOnClickListener(v->recalcOne(idx,true)); card.addView(recalc);
             android.text.TextWatcher w=new android.text.TextWatcher(){
                 public void beforeTextChanged(CharSequence s,int st,int c,int a){}
                 public void onTextChanged(CharSequence s,int st,int b,int c){ recalcOne(idx,false); updateSummary(); }
