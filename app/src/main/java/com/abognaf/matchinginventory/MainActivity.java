@@ -15,6 +15,14 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 
 public class MainActivity extends Activity {
+    static final int BLUE = Color.rgb(8,79,155);
+    static final int BLUE2 = Color.rgb(18,119,205);
+    static final int BG = Color.rgb(245,248,252);
+    static final int INK = Color.rgb(18,45,74);
+    static final int MUTED = Color.rgb(98,121,147);
+    static final int LINE = Color.rgb(222,232,242);
+    static final int WHITE = Color.WHITE;
+
     DbHelper db;
     LinearLayout page, bottom;
     List<Tank> tanks;
@@ -31,72 +39,185 @@ public class MainActivity extends Activity {
 
     @Override public void onCreate(Bundle b){
         super.onCreate(b);
-        getWindow().setStatusBarColor(Color.rgb(11,111,164));
+        getWindow().setStatusBarColor(BLUE);
+        getWindow().setNavigationBarColor(Color.WHITE);
         db=new DbHelper(this); tanks=db.getTanks();
         prefs=getSharedPreferences("settings",MODE_PRIVATE);
         buildShell();
         showHome();
     }
 
+    int dp(int v){ return (int)(v*getResources().getDisplayMetrics().density+0.5f); }
+
     TextView title(String s){
-        TextView t=new TextView(this); t.setText(s); t.setTextSize(22); t.setTextColor(Color.rgb(20,40,55));
-        t.setGravity(Gravity.RIGHT); t.setPadding(20,18,20,18); t.setTypeface(null,1); return t;
+        TextView t=new TextView(this); t.setText(s); t.setTextSize(22); t.setTextColor(INK);
+        t.setGravity(Gravity.RIGHT|Gravity.CENTER_VERTICAL); t.setPadding(dp(16),dp(12),dp(16),dp(12));
+        t.setTypeface(Typeface.DEFAULT,Typeface.BOLD); return t;
     }
+
+    TextView small(String s){
+        TextView t=new TextView(this); t.setText(s); t.setTextSize(13); t.setTextColor(MUTED);
+        t.setGravity(Gravity.RIGHT); return t;
+    }
+
+    GradientDrawable shape(int color,float radius){
+        GradientDrawable g=new GradientDrawable(); g.setColor(color); g.setCornerRadius(dp((int)radius)); return g;
+    }
+
+    GradientDrawable strokeShape(int color,float radius,int strokeColor){
+        GradientDrawable g=shape(color,radius); g.setStroke(dp(1),strokeColor); return g;
+    }
+
     Button btn(String s){
-        Button b=new Button(this); b.setText(s); b.setAllCaps(false); b.setTextSize(16); b.setMinHeight(60); return b;
+        Button b=new Button(this); b.setText(s); b.setAllCaps(false); b.setTextSize(16); b.setTextColor(WHITE);
+        b.setTypeface(Typeface.DEFAULT,Typeface.BOLD); b.setGravity(Gravity.CENTER); b.setMinHeight(dp(54));
+        b.setBackground(shape(BLUE2,16)); b.setPadding(dp(12),dp(8),dp(12),dp(8));
+        LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,dp(56)); lp.setMargins(0,dp(6),0,dp(6)); b.setLayoutParams(lp);
+        b.setStateListAnimator(null); return b;
     }
+
+    Button ghostBtn(String s){
+        Button b=btn(s); b.setTextColor(BLUE); b.setBackground(strokeShape(Color.WHITE,16,BLUE2)); return b;
+    }
+
     EditText input(String hint){
-        EditText e=new EditText(this); e.setHint(hint); e.setTextSize(18); e.setGravity(Gravity.RIGHT);
+        EditText e=new EditText(this); e.setHint(hint); e.setHintTextColor(Color.rgb(145,160,177)); e.setTextColor(INK);
+        e.setTextSize(17); e.setGravity(Gravity.RIGHT|Gravity.CENTER_VERTICAL);
+        e.setPadding(dp(16),dp(6),dp(16),dp(6)); e.setSingleLine(true);
+        e.setBackground(strokeShape(Color.WHITE,14,LINE));
         e.setInputType(android.text.InputType.TYPE_CLASS_NUMBER | android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL);
+        LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,dp(54)); lp.setMargins(0,dp(5),0,dp(5)); e.setLayoutParams(lp);
         return e;
     }
+
     void buildShell(){
-        LinearLayout root=new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL); root.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
-        page=new LinearLayout(this); page.setOrientation(LinearLayout.VERTICAL); page.setPadding(16,10,16,10); page.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
-        ScrollView scroll=new ScrollView(this); scroll.addView(page);
+        LinearLayout root=new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL);
+        root.setLayoutDirection(View.LAYOUT_DIRECTION_RTL); root.setBackgroundColor(BG);
+
+        page=new LinearLayout(this); page.setOrientation(LinearLayout.VERTICAL);
+        page.setPadding(dp(16),dp(12),dp(16),dp(14)); page.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
+        ScrollView scroll=new ScrollView(this); scroll.setFillViewport(true); scroll.setBackgroundColor(BG); scroll.addView(page);
         root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
 
         bottom=new LinearLayout(this); bottom.setOrientation(LinearLayout.HORIZONTAL); bottom.setGravity(Gravity.CENTER);
-        String[] names={"الرئيسية","الجرد","السجل","التقارير","الإعدادات"};
-        for(String n:names){
-            Button b=btn(n); bottom.addView(b,new LinearLayout.LayoutParams(0,64,1));
-            if(n.equals("الرئيسية")) b.setOnClickListener(v->showHome());
-            else if(n.equals("الجرد")) b.setOnClickListener(v->showAudit());
-            else if(n.equals("السجل")) b.setOnClickListener(v->showArchive());
-            else if(n.equals("التقارير")) b.setOnClickListener(v->showReports());
-            else b.setOnClickListener(v->showSettingsPage());
-        }
-        root.addView(bottom,new LinearLayout.LayoutParams(-1,64));
+        bottom.setPadding(dp(8),dp(6),dp(8),dp(6)); bottom.setBackgroundColor(Color.WHITE); bottom.setElevation(dp(10));
+        root.addView(bottom,new LinearLayout.LayoutParams(-1,dp(70)));
         setContentView(root);
+        renderBottom("الرئيسية");
     }
-    void clearPage(){ page.removeAllViews(); }
+
+    void renderBottom(String active){
+        bottom.removeAllViews();
+        String[][] items={{"⌂","الرئيسية"},{"▥","التقارير"},{"↻","سجل الجرد"},{"⚙","الإعدادات"}};
+        for(String[] it:items){
+            LinearLayout tab=new LinearLayout(this); tab.setOrientation(LinearLayout.VERTICAL); tab.setGravity(Gravity.CENTER);
+            boolean on=it[1].equals(active);
+            if(on) tab.setBackground(shape(Color.rgb(232,243,255),18));
+            TextView ic=new TextView(this); ic.setText(it[0]); ic.setTextSize(22); ic.setGravity(Gravity.CENTER);
+            ic.setTextColor(on?BLUE2:MUTED);
+            TextView tx=new TextView(this); tx.setText(it[1]); tx.setTextSize(11); tx.setGravity(Gravity.CENTER);
+            tx.setTextColor(on?BLUE:MUTED); if(on) tx.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
+            tab.addView(ic,new LinearLayout.LayoutParams(-1,dp(30))); tab.addView(tx,new LinearLayout.LayoutParams(-1,dp(22)));
+            bottom.addView(tab,new LinearLayout.LayoutParams(0,-1,1));
+            if(it[1].equals("الرئيسية")) tab.setOnClickListener(v->showHome());
+            else if(it[1].equals("التقارير")) tab.setOnClickListener(v->showReports());
+            else if(it[1].equals("سجل الجرد")) tab.setOnClickListener(v->showArchive());
+            else tab.setOnClickListener(v->showSettingsPage());
+        }
+    }
+
+    void clearPage(){ page.removeAllViews(); page.setBackgroundColor(BG); }
+
+    void addTopBar(String text){
+        LinearLayout bar=new LinearLayout(this); bar.setGravity(Gravity.CENTER_VERTICAL); bar.setPadding(dp(6),dp(4),dp(6),dp(8));
+        TextView t=title(text); t.setTextSize(24); bar.addView(t,new LinearLayout.LayoutParams(0,dp(60),1));
+        TextView drop=new TextView(this); drop.setText("◉"); drop.setTextSize(25); drop.setTextColor(BLUE2); drop.setGravity(Gravity.CENTER);
+        bar.addView(drop,new LinearLayout.LayoutParams(dp(48),dp(48))); page.addView(bar);
+    }
+
+    View actionCard(String icon,String name,String sub,View.OnClickListener click,boolean featured){
+        LinearLayout card=new LinearLayout(this); card.setOrientation(LinearLayout.HORIZONTAL); card.setGravity(Gravity.CENTER_VERTICAL);
+        card.setPadding(dp(14),dp(12),dp(14),dp(12)); card.setBackground(strokeShape(featured?Color.rgb(235,246,255):Color.WHITE,20,featured?Color.rgb(190,222,248):LINE));
+        card.setElevation(dp(2)); LinearLayout.LayoutParams cp=new LinearLayout.LayoutParams(-1,dp(92)); cp.setMargins(0,dp(6),0,dp(6)); card.setLayoutParams(cp);
+
+        TextView arrow=new TextView(this); arrow.setText("‹"); arrow.setTextSize(34); arrow.setTextColor(BLUE); arrow.setGravity(Gravity.CENTER);
+        card.addView(arrow,new LinearLayout.LayoutParams(dp(44),-1));
+
+        LinearLayout texts=new LinearLayout(this); texts.setOrientation(LinearLayout.VERTICAL); texts.setGravity(Gravity.CENTER_VERTICAL|Gravity.RIGHT);
+        TextView n=title(name); n.setTextSize(19); n.setPadding(0,0,0,0);
+        TextView st=small(sub); st.setTextSize(13);
+        texts.addView(n); texts.addView(st); card.addView(texts,new LinearLayout.LayoutParams(0,-1,1));
+
+        TextView ico=new TextView(this); ico.setText(icon); ico.setTextSize(28); ico.setTextColor(Color.WHITE); ico.setGravity(Gravity.CENTER);
+        ico.setBackground(shape(BLUE2,16)); card.addView(ico,new LinearLayout.LayoutParams(dp(62),dp(62)));
+        card.setOnClickListener(click); return card;
+    }
+
+    LinearLayout panel(){
+        LinearLayout l=new LinearLayout(this); l.setOrientation(LinearLayout.VERTICAL); l.setPadding(dp(14),dp(12),dp(14),dp(14));
+        l.setBackground(strokeShape(Color.WHITE,18,LINE)); l.setElevation(dp(2));
+        LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2); lp.setMargins(0,dp(6),0,dp(8)); l.setLayoutParams(lp); return l;
+    }
 
     void showHome(){
-        clearPage(); page.addView(title("مطابقة الجرد"));
-        String station=prefs.getString("station_name","");
-        if(!station.isEmpty()){ TextView s=title(station); s.setTextSize(18); page.addView(s); }
-        Button a=btn("بدء جرد جديد"); a.setOnClickListener(v->showAudit()); page.addView(a);
-        Button ar=btn("سجل الجرد"); ar.setOnClickListener(v->showArchive()); page.addView(ar);
-        Button r=btn("التقارير"); r.setOnClickListener(v->showReports()); page.addView(r);
-        Button st=btn("الإعدادات"); st.setOnClickListener(v->showSettingsPage()); page.addView(st);
+        clearPage(); renderBottom("الرئيسية");
+
+        LinearLayout hero=new LinearLayout(this); hero.setOrientation(LinearLayout.VERTICAL); hero.setGravity(Gravity.RIGHT);
+        hero.setPadding(dp(22),dp(20),dp(22),dp(18));
+        GradientDrawable hg=new GradientDrawable(GradientDrawable.Orientation.TL_BR,new int[]{Color.rgb(4,65,139),Color.rgb(15,123,211)});
+        hg.setCornerRadius(dp(28)); hero.setBackground(hg); hero.setElevation(dp(4));
+        LinearLayout.LayoutParams hp=new LinearLayout.LayoutParams(-1,dp(215)); hp.setMargins(0,0,0,dp(14)); hero.setLayoutParams(hp);
+
+        TextView brand=new TextView(this); brand.setText("◉  مطابقة الجرد"); brand.setTextColor(Color.WHITE); brand.setTextSize(28);
+        brand.setGravity(Gravity.RIGHT); brand.setTypeface(Typeface.DEFAULT,Typeface.BOLD); hero.addView(brand);
+
+        TextView sub=new TextView(this); sub.setText("إدارة جرد خزانات الوقود بدقة وسهولة"); sub.setTextColor(Color.rgb(218,236,255));
+        sub.setTextSize(15); sub.setGravity(Gravity.RIGHT); sub.setPadding(0,dp(4),0,dp(12)); hero.addView(sub);
+
+        String station=prefs.getString("station_name","محطة الأمير"); if(station.trim().isEmpty()) station="محطة الأمير";
+        TextView stationPill=new TextView(this); stationPill.setText("⌖  "+station); stationPill.setTextSize(16); stationPill.setTextColor(BLUE);
+        stationPill.setGravity(Gravity.CENTER); stationPill.setTypeface(Typeface.DEFAULT,Typeface.BOLD); stationPill.setBackground(shape(Color.rgb(229,242,255),24));
+        hero.addView(stationPill,new LinearLayout.LayoutParams(-1,dp(46)));
+
+        TextView slogan=new TextView(this); slogan.setText("دقة في الجرد .. ثقة في التشغيل"); slogan.setTextColor(Color.WHITE);
+        slogan.setTextSize(14); slogan.setGravity(Gravity.RIGHT); slogan.setPadding(0,dp(14),0,0); hero.addView(slogan);
+        page.addView(hero);
+
+        page.addView(actionCard("＋","بدء جرد جديد","بدء عملية جرد جديدة للخزانات",v->showAudit(),true));
+        page.addView(actionCard("↻","سجل الجرد","عرض جميع عمليات الجرد السابقة",v->showArchive(),false));
+        page.addView(actionCard("▥","التقارير","مراجعة وتحليل نتائج الجرد",v->showReports(),false));
+        page.addView(actionCard("⚙","الإعدادات","تخصيص التطبيق والخزانات",v->showSettingsPage(),false));
+
+        LinearLayout info=panel(); info.setGravity(Gravity.CENTER_VERTICAL);
+        TextView x=title("⛽  نحو إدارة أفضل للمخزون"); x.setTextSize(16); x.setPadding(0,0,0,0); info.addView(x);
+        TextView y=small("دقة في البيانات .. كفاءة في التشغيل"); y.setPadding(0,dp(4),0,0); info.addView(y); page.addView(info);
+
+        LinearLayout sig=new LinearLayout(this); sig.setOrientation(LinearLayout.VERTICAL); sig.setGravity(Gravity.CENTER);
+        sig.setPadding(0,dp(8),0,dp(6));
+        TextView s1=new TextView(this); s1.setText("△  أبو قناف للأتمتة"); s1.setTextSize(16); s1.setTextColor(BLUE);
+        s1.setTypeface(Typeface.DEFAULT,Typeface.BOLD); s1.setGravity(Gravity.CENTER); sig.addView(s1);
+        TextView s2=new TextView(this); s2.setText("معًا نصنع التشغيل الذكي"); s2.setTextSize(11); s2.setTextColor(MUTED); s2.setGravity(Gravity.CENTER); sig.addView(s2);
+        page.addView(sig);
     }
 
     void showAudit(){
-        clearPage(); tanks=db.getTanks(); page.addView(title("جرد جديد"));
-        TextView ds=title("الديزل"); ds.setTextSize(19); page.addView(ds);
+        clearPage(); renderBottom("الرئيسية"); tanks=db.getTanks(); addTopBar("بدء جرد جديد");
+        LinearLayout steps=panel(); steps.setOrientation(LinearLayout.HORIZONTAL); steps.setGravity(Gravity.CENTER);
+        String[] stepNames={"① المعلومات","② قراءات الخزانات","③ مراجعة"};
+        for(String z:stepNames){ TextView tv=new TextView(this); tv.setText(z); tv.setGravity(Gravity.CENTER); tv.setTextSize(12); tv.setTextColor(z.startsWith("②")?BLUE:MUTED); if(z.startsWith("②")) tv.setTypeface(Typeface.DEFAULT,Typeface.BOLD); steps.addView(tv,new LinearLayout.LayoutParams(0,dp(42),1)); }
+        page.addView(steps);
+        TextView ds=title("الخزانات — الديزل"); ds.setTextSize(19); page.addView(ds);
         for(int i=0;i<4;i++){
-            if(i==3){ TextView ps=title("البترول"); ps.setTextSize(19); page.addView(ps); }
+            if(i==3){ TextView ps=title("الخزانات — البترول"); ps.setTextSize(19); page.addView(ps); }
             final int idx=i; Tank t=tanks.get(i);
-            LinearLayout card=new LinearLayout(this); card.setOrientation(LinearLayout.VERTICAL); card.setPadding(16,12,16,18);
-            GradientDrawableBg.apply(card, i==3 ? 0xFFEAF3FF : 0xFFF3FAF4, 18);
+            LinearLayout card=panel(); card.setPadding(dp(14),dp(10),dp(14),dp(12));
             TextView nm=title(t.name); nm.setTextSize(17); card.addView(nm);
-            TextView dims=new TextView(this); dims.setGravity(Gravity.RIGHT); dims.setText("الطول "+fmt(t.lengthCm)+" سم  |  القطر "+fmt(t.diameterCm)+" سم");
+            TextView dims=small("الطول "+fmt(t.lengthCm)+" سم  •  القطر "+fmt(t.diameterCm)+" سم");
             card.addView(dims);
             h[i]=input("التمتير بالسنتيمتر");
             actual[i]=new TextView(this); actual[i].setGravity(Gravity.RIGHT); actual[i].setTextSize(16); actual[i].setText("الكمية الفعلية: —");
             card.addView(h[i]); card.addView(actual[i]);
-            Button recalc=btn("إعادة حساب هذا الخزان");
-            recalc.setOnClickListener(v->recalcOne(idx,true)); card.addView(recalc);
+            Button recalc=ghostBtn("حساب الكمية"); recalc.setOnClickListener(v->recalcOne(idx,true)); card.addView(recalc);
             android.text.TextWatcher w=new android.text.TextWatcher(){
                 public void beforeTextChanged(CharSequence s,int st,int c,int a){}
                 public void onTextChanged(CharSequence s,int st,int b,int c){ recalcOne(idx,false); updateSummary(); }
@@ -107,8 +228,9 @@ public class MainActivity extends Activity {
         }
 
         TextView balances=title("الأرصدة الإجمالية في الحساب"); balances.setTextSize(19); page.addView(balances);
-        dieselBook=input("إجمالي رصيد الديزل في الحساب باللتر"); page.addView(dieselBook);
-        petrolBook=input("إجمالي رصيد البترول في الحساب باللتر"); page.addView(petrolBook);
+        LinearLayout totals=panel();
+        dieselBook=input("إجمالي رصيد الديزل في الحساب باللتر"); totals.addView(dieselBook);
+        petrolBook=input("إجمالي رصيد البترول في الحساب باللتر"); totals.addView(petrolBook); page.addView(totals);
         android.text.TextWatcher totalWatcher=new android.text.TextWatcher(){
             public void beforeTextChanged(CharSequence s,int st,int c,int a){}
             public void onTextChanged(CharSequence s,int st,int b,int c){ updateSummary(); }
@@ -117,8 +239,8 @@ public class MainActivity extends Activity {
         dieselBook.addTextChangedListener(totalWatcher);
         petrolBook.addTextChangedListener(totalWatcher);
 
-        summary=title("الملخص النهائي سيظهر هنا"); summary.setTextSize(18); page.addView(summary);
-        notes=new EditText(this); notes.setHint("ملاحظات عامة (اختيارية)"); notes.setGravity(Gravity.RIGHT); notes.setMinLines(2); page.addView(notes);
+        summary=title("الملخص النهائي سيظهر هنا"); summary.setTextSize(17); summary.setBackground(strokeShape(Color.rgb(238,247,255),18,Color.rgb(190,222,248))); page.addView(summary);
+        notes=new EditText(this); notes.setHint("ملاحظات عامة (اختيارية)"); notes.setGravity(Gravity.RIGHT); notes.setTextColor(INK); notes.setHintTextColor(Color.rgb(145,160,177)); notes.setMinLines(2); notes.setPadding(dp(14),dp(12),dp(14),dp(12)); notes.setBackground(strokeShape(Color.WHITE,16,LINE)); page.addView(notes);
         Button save=btn("حفظ الجرد"); save.setOnClickListener(v->saveAudit()); page.addView(save);
     }
 
@@ -192,7 +314,7 @@ public class MainActivity extends Activity {
     }
 
     void showArchive(){
-        clearPage(); page.addView(title("سجل الجرد"));
+        clearPage(); renderBottom("سجل الجرد"); addTopBar("سجل الجرد");
         EditText dateSearch=input("بحث بالتاريخ مثل 2026/09/22"); dateSearch.setInputType(android.text.InputType.TYPE_CLASS_TEXT); page.addView(dateSearch);
         Spinner fuel=new Spinner(this); fuel.setAdapter(new ArrayAdapter<>(this,android.R.layout.simple_spinner_dropdown_item,new String[]{"الكل","ديزل","بترول"})); page.addView(fuel);
         LinearLayout list=new LinearLayout(this); list.setOrientation(LinearLayout.VERTICAL); page.addView(list);
@@ -207,7 +329,7 @@ public class MainActivity extends Activity {
                 String line=dt+"\n";
                 if(f.equals("الكل")||f.equals("ديزل")) line+="ديزل: "+Math.round(dd)+" لتر  ";
                 if(f.equals("الكل")||f.equals("بترول")) line+="بترول: "+Math.round(pd)+" لتر";
-                Button b=btn(line); b.setOnClickListener(v->showAuditRecord(id)); list.addView(b);
+                Button b=ghostBtn(line); b.setGravity(Gravity.RIGHT|Gravity.CENTER_VERTICAL); b.setTextColor(INK); b.setOnClickListener(v->showAuditRecord(id)); list.addView(b);
             }
             c.close();
         };
@@ -224,12 +346,12 @@ public class MainActivity extends Activity {
     }
 
     void showAuditRecord(long id){
-        clearPage(); page.addView(title("نتيجة الجرد"));
+        clearPage(); renderBottom("سجل الجرد"); addTopBar("نتيجة الجرد");
         Cursor c=db.getAudit(id); if(!c.moveToFirst()){c.close();return;}
         String dt=new SimpleDateFormat("yyyy/MM/dd HH:mm",Locale.getDefault()).format(new Date(c.getLong(c.getColumnIndexOrThrow("created_at"))));
         TextView info=title(dt); info.setTextSize(16); page.addView(info);
         for(int i=0;i<4;i++){
-            int n=i+1; TextView t=new TextView(this); t.setGravity(Gravity.RIGHT); t.setTextSize(17); t.setPadding(12,14,12,14);
+            int n=i+1; TextView t=new TextView(this); t.setGravity(Gravity.RIGHT); t.setTextSize(16); t.setTextColor(INK); t.setPadding(dp(14),dp(14),dp(14),dp(14)); t.setBackground(strokeShape(Color.WHITE,16,LINE));
             t.setText(tanks.get(i).name+"\nالتمتير: "+Math.round(c.getDouble(c.getColumnIndexOrThrow("t"+n+"_h")))+" سم | الكمية الفعلية: "+Math.round(c.getDouble(c.getColumnIndexOrThrow("t"+n+"_actual")))+" لتر");
             page.addView(t);
         }
@@ -250,8 +372,8 @@ public class MainActivity extends Activity {
     }
 
     void showReports(){
-        clearPage(); page.addView(title("التقارير"));
-        TextView info=title("التقرير يعرض سجل الجرد مع إجمالي الزيادة والعجز، ويمكن تصدير تقرير الفترة PDF."); info.setTextSize(15); page.addView(info);
+        clearPage(); renderBottom("التقارير"); addTopBar("التقارير");
+        LinearLayout intro=panel(); TextView info=title("تحليل نتائج الجرد"); info.setTextSize(18); info.setPadding(0,0,0,0); intro.addView(info); TextView ii=small("ملخصات الزيادة والعجز وتقارير PDF للفترة"); ii.setPadding(0,dp(4),0,0); intro.addView(ii); page.addView(intro);
         Button all=btn("عرض ملخص كل الفترة"); all.setOnClickListener(v->showReportSummary(0,Long.MAX_VALUE)); page.addView(all);
         Button last30=btn("آخر 30 يوم"); last30.setOnClickListener(v->showReportSummary(System.currentTimeMillis()-30L*24*60*60*1000,Long.MAX_VALUE)); page.addView(last30);
         Button export=btn("تصدير تقرير الفترة PDF"); export.setOnClickListener(v->{
@@ -261,7 +383,7 @@ public class MainActivity extends Activity {
     }
 
     void showReportSummary(long start,long end){
-        clearPage(); page.addView(title("ملخص التقارير"));
+        clearPage(); renderBottom("التقارير"); addTopBar("ملخص التقارير");
         Cursor c=db.listAuditsBetween(start,end); int count=0; double posD=0,negD=0,posP=0,negP=0;
         while(c.moveToNext()){count++;double d=c.getDouble(2),p=c.getDouble(3);if(d>=0)posD+=d;else negD+=d;if(p>=0)posP+=p;else negP+=p;}
         c.close();
@@ -273,9 +395,10 @@ public class MainActivity extends Activity {
     }
 
     void showSettingsPage(){
-        clearPage(); tanks=db.getTanks(); page.addView(title("الإعدادات"));
-        EditText station=new EditText(this); station.setHint("اسم المحطة"); station.setGravity(Gravity.RIGHT); station.setText(prefs.getString("station_name","")); page.addView(station);
-        Button logo=btn("اختيار شعار من معرض الهاتف"); logo.setOnClickListener(v->{
+        clearPage(); renderBottom("الإعدادات"); tanks=db.getTanks(); addTopBar("الإعدادات");
+        TextView brandInfo=small("مطابقة الجرد  •  بواسطة أبو قناف للأتمتة"); brandInfo.setGravity(Gravity.CENTER); brandInfo.setPadding(0,0,0,dp(8)); page.addView(brandInfo);
+        EditText station=input("اسم المحطة"); station.setInputType(android.text.InputType.TYPE_CLASS_TEXT); station.setText(prefs.getString("station_name","")); page.addView(station);
+        Button logo=ghostBtn("اختيار شعار من معرض الهاتف"); logo.setOnClickListener(v->{
             Intent i=new Intent(Intent.ACTION_OPEN_DOCUMENT); i.setType("image/*"); i.addCategory(Intent.CATEGORY_OPENABLE); startActivityForResult(i,PICK_LOGO);
         }); page.addView(logo);
         EditText[] names=new EditText[4],lens=new EditText[4],dias=new EditText[4];
