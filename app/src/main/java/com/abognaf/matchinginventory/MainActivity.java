@@ -341,7 +341,7 @@ public class MainActivity extends Activity {
                 long id=c.getLong(0),ts=c.getLong(1); double dd=c.getDouble(2),pd=c.getDouble(3);
                 String dt=new SimpleDateFormat("yyyy/MM/dd HH:mm",Locale.getDefault()).format(new Date(ts));
                 if(!q.isEmpty()&&!dt.contains(q)) continue;
-                String line=dt+"\n";
+                String line=auditNumber(id,ts)+"\n"+dt+"\n";
                 if(ff.equals("الكل")||ff.equals("ديزل")) line+="ديزل: "+Math.round(dd)+" لتر  ";
                 if(ff.equals("الكل")||ff.equals("بترول")) line+="بترول: "+Math.round(pd)+" لتر";
                 Button b=ghostBtn(line); b.setGravity(Gravity.RIGHT|Gravity.CENTER_VERTICAL); b.setTextColor(INK);
@@ -361,7 +361,9 @@ public class MainActivity extends Activity {
     void showAuditRecord(long id){
         clearPage(); renderBottom("سجل الجرد"); addTopBar("نتيجة الجرد");
         Cursor c=db.getAudit(id); if(!c.moveToFirst()){c.close();return;}
-        String dt=new SimpleDateFormat("yyyy/MM/dd HH:mm",Locale.getDefault()).format(new Date(c.getLong(c.getColumnIndexOrThrow("created_at"))));
+        long createdAt=c.getLong(c.getColumnIndexOrThrow("created_at"));
+        String dt=new SimpleDateFormat("yyyy/MM/dd HH:mm",Locale.getDefault()).format(new Date(createdAt));
+        TextView num=title("رقم الجرد: "+auditNumber(id,createdAt)); num.setTextSize(17); page.addView(num);
         TextView info=title(dt); info.setTextSize(16); page.addView(info);
 
         Cursor items=db.getAuditItems(id);
@@ -491,6 +493,11 @@ public class MainActivity extends Activity {
                 PdfReport.writePeriod(out,c,station,"تقرير فترة مطابقة الجرد"); c.close(); toast("تم إنشاء تقرير الفترة");
             }
         }catch(Exception e){toast("فشل التصدير: "+e.getMessage());}
+    }
+
+    String auditNumber(long id,long ts){
+        String d=new SimpleDateFormat("yyyyMMdd",Locale.US).format(new Date(ts));
+        return String.format(Locale.US,"JRD-%s-%03d",d,id);
     }
 
     String fmt(double x){ return x==Math.rint(x)?String.valueOf((long)x):String.valueOf(x); }
