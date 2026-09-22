@@ -42,32 +42,71 @@ public final class PdfReport {
         double pd=c.getDouble(c.getColumnIndexOrThrow("petrol_diff"));
 
         p.setFakeBoldText(true);
-        cv.drawText("الفعلي",555,y,p); cv.drawText("التمتير",350,y,p); cv.drawText("الخزان",165,y,p);
+        cv.drawText("الفرق",555,y,p);
+        cv.drawText("في الحساب",450,y,p);
+        cv.drawText("الفعلي",335,y,p);
+        cv.drawText("التمتير",225,y,p);
+        cv.drawText("الخزان",120,y,p);
         y+=12; cv.drawLine(40,y,555,y,p); y+=24; p.setFakeBoldText(false);
+
+        boolean dieselShown=false, petrolShown=false;
 
         if(items!=null && items.getCount()>0){
             while(items.moveToNext()){
-                if(y>720){ pdf.finishPage(page); page=pdf.startPage(new PdfDocument.PageInfo.Builder(595,842,2).create()); cv=page.getCanvas(); y=60; }
-                cv.drawText(String.valueOf(Math.round(items.getDouble(5))),555,y,p);
-                cv.drawText(String.valueOf(Math.round(items.getDouble(4))),350,y,p);
-                cv.drawText(items.getString(0),165,y,p);
-                y+=28;
+                String tankName=items.getString(0);
+                String fuel=items.getString(1);
+                long h=Math.round(items.getDouble(4));
+                long a=Math.round(items.getDouble(5));
+
+                String bookText="";
+                String diffText="";
+                if("ديزل".equals(fuel) && !dieselShown){
+                    bookText=String.valueOf(Math.round(dieselBook));
+                    diffText=String.valueOf(Math.round(dd));
+                    dieselShown=true;
+                }else if("بترول".equals(fuel) && !petrolShown){
+                    bookText=String.valueOf(Math.round(petrolBook));
+                    diffText=String.valueOf(Math.round(pd));
+                    petrolShown=true;
+                }
+
+                cv.drawText(diffText,555,y,p);
+                cv.drawText(bookText,450,y,p);
+                cv.drawText(String.valueOf(a),335,y,p);
+                cv.drawText(String.valueOf(h),225,y,p);
+                cv.drawText(tankName,120,y,p);
+                y+=30;
             }
         }else{
             for(int i=0;i<4 && i<legacyTanks.size();i++){
                 int n=i+1;
-                cv.drawText(String.valueOf(Math.round(c.getDouble(c.getColumnIndexOrThrow("t"+n+"_actual")))),555,y,p);
-                cv.drawText(String.valueOf(Math.round(c.getDouble(c.getColumnIndexOrThrow("t"+n+"_h")))),350,y,p);
-                cv.drawText(legacyTanks.get(i).name,165,y,p);
-                y+=28;
+                long h=Math.round(c.getDouble(c.getColumnIndexOrThrow("t"+n+"_h")));
+                long a=Math.round(c.getDouble(c.getColumnIndexOrThrow("t"+n+"_actual")));
+                String fuel=legacyTanks.get(i).fuelType;
+                String bookText="";
+                String diffText="";
+                if("ديزل".equals(fuel) && !dieselShown){
+                    bookText=String.valueOf(Math.round(dieselBook));
+                    diffText=String.valueOf(Math.round(dd));
+                    dieselShown=true;
+                }else if("بترول".equals(fuel) && !petrolShown){
+                    bookText=String.valueOf(Math.round(petrolBook));
+                    diffText=String.valueOf(Math.round(pd));
+                    petrolShown=true;
+                }
+
+                cv.drawText(diffText,555,y,p);
+                cv.drawText(bookText,450,y,p);
+                cv.drawText(String.valueOf(a),335,y,p);
+                cv.drawText(String.valueOf(h),225,y,p);
+                cv.drawText(legacyTanks.get(i).name,120,y,p);
+                y+=30;
             }
         }
 
-        y+=18; p.setFakeBoldText(true); p.setTextSize(14);
-        cv.drawText("إجمالي رصيد الديزل في الحساب: "+Math.round(dieselBook)+" لتر",555,y,p); y+=24;
+        y+=18; p.setFakeBoldText(true); p.setTextSize(15);
         cv.drawText(status(dd,"الديزل"),555,y,p); y+=28;
-        cv.drawText("إجمالي رصيد البترول في الحساب: "+Math.round(petrolBook)+" لتر",555,y,p); y+=24;
-        cv.drawText(status(pd,"البترول"),555,y,p); y+=32;
+        cv.drawText(status(pd,"البترول"),555,y,p); y+=35;
 
         p.setFakeBoldText(false); p.setTextSize(13);
         String notes=c.getString(c.getColumnIndexOrThrow("notes"));
