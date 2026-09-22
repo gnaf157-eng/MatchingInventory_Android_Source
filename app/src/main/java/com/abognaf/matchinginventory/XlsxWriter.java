@@ -61,19 +61,17 @@ public final class XlsxWriter {
         long ts = cur.getLong(cur.getColumnIndexOrThrow("created_at"));
         String dt = new SimpleDateFormat("yyyy/MM/dd HH:mm", Locale.getDefault()).format(new Date(ts));
         rows.append("<row r=\""+r+"\">").append(c("A"+r,"التاريخ")).append(c("B"+r,dt)).append("</row>"); r++;
-        rows.append("<row r=\""+r+"\">").append(c("A"+r,"الخزان")).append(c("B"+r,"التمتير سم")).append(c("C"+r,"الفعلي لتر")).append(c("D"+r,"في الحساب لتر")).append(c("E"+r,"الفرق لتر")).append("</row>"); r++;
+        rows.append("<row r=\""+r+"\">").append(c("A"+r,"الخزان")).append(c("B"+r,"التمتير سم")).append(c("C"+r,"الفعلي لتر")).append("</row>"); r++;
         for (int i=0;i<4;i++,r++) {
             int n=i+1;
             rows.append("<row r=\""+r+"\">")
                 .append(c("A"+r,tanks.get(i).name))
                 .append(n("B"+r,cur.getDouble(cur.getColumnIndexOrThrow("t"+n+"_h"))))
                 .append(n("C"+r,cur.getDouble(cur.getColumnIndexOrThrow("t"+n+"_actual"))))
-                .append(n("D"+r,cur.getDouble(cur.getColumnIndexOrThrow("t"+n+"_book"))))
-                .append(n("E"+r,cur.getDouble(cur.getColumnIndexOrThrow("t"+n+"_diff"))))
                 .append("</row>");
         }
-        rows.append("<row r=\""+r+"\">").append(c("A"+r,"إجمالي الديزل")).append(n("C"+r,cur.getDouble(cur.getColumnIndexOrThrow("diesel_actual")))).append(n("D"+r,cur.getDouble(cur.getColumnIndexOrThrow("diesel_book")))).append(n("E"+r,cur.getDouble(cur.getColumnIndexOrThrow("diesel_diff")))).append("</row>"); r++;
-        rows.append("<row r=\""+r+"\">").append(c("A"+r,"إجمالي البترول")).append(n("C"+r,cur.getDouble(cur.getColumnIndexOrThrow("petrol_actual")))).append(n("D"+r,cur.getDouble(cur.getColumnIndexOrThrow("petrol_book")))).append(n("E"+r,cur.getDouble(cur.getColumnIndexOrThrow("petrol_diff")))).append("</row>"); r++;
+        rows.append("<row r=\""+r+"\">").append(c("A"+r,"إجمالي الديزل")).append(n("C"+r,cur.getDouble(cur.getColumnIndexOrThrow("diesel_actual")))).append(c("D"+r,"الرصيد في الحساب")).append(n("E"+r,cur.getDouble(cur.getColumnIndexOrThrow("diesel_book")))).append(c("F"+r,"الفرق")).append(n("G"+r,cur.getDouble(cur.getColumnIndexOrThrow("diesel_diff")))).append("</row>"); r++;
+        rows.append("<row r=\""+r+"\">").append(c("A"+r,"إجمالي البترول")).append(n("C"+r,cur.getDouble(cur.getColumnIndexOrThrow("petrol_actual")))).append(c("D"+r,"الرصيد في الحساب")).append(n("E"+r,cur.getDouble(cur.getColumnIndexOrThrow("petrol_book")))).append(c("F"+r,"الفرق")).append(n("G"+r,cur.getDouble(cur.getColumnIndexOrThrow("petrol_diff")))).append("</row>"); r++;
         rows.append("<row r=\""+r+"\">").append(c("A"+r,"ملاحظات")).append(c("B"+r,cur.getString(cur.getColumnIndexOrThrow("notes")))).append("</row>");
 
         put(z,"xl/worksheets/sheet1.xml",
