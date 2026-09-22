@@ -38,6 +38,7 @@ public class MainActivity extends Activity {
     SharedPreferences prefs;
     static final int CREATE_DOC=501, PICK_LOGO=502, CREATE_PERIOD_PDF=503;
     long reportStart=0, reportEnd=Long.MAX_VALUE;
+    boolean savingAudit=false;
 
     @Override public void onCreate(Bundle b){
         super.onCreate(b);
@@ -290,6 +291,7 @@ public class MainActivity extends Activity {
     }
 
     void saveAudit(){
+        if(savingAudit) return;
         double[] hv=new double[4],av=new double[4];
         for(int i=0;i<4;i++){
             if(h[i].getText().toString().trim().isEmpty()){ toast("يجب إدخال التمتير لكل الخزانات"); return; }
@@ -307,11 +309,24 @@ public class MainActivity extends Activity {
             dieselAccount=Double.parseDouble(dieselBook.getText().toString());
             petrolAccount=Double.parseDouble(petrolBook.getText().toString());
         }catch(Exception e){ toast("تحقق من الأرصدة الإجمالية"); return; }
-        db.saveAudit(hv,av,dieselAccount,petrolAccount,notes.getText().toString().trim());
-        new AlertDialog.Builder(this).setTitle("تم الحفظ بنجاح")
-            .setMessage("هل تريد بدء جرد جديد ومسح الحقول؟")
-            .setPositiveButton("نعم",(d,w)->showAudit())
-            .setNegativeButton("لا",null).show();
+        savingAudit=true;
+        try{
+            long savedId=db.saveAudit(hv,av,dieselAccount,petrolAccount,notes.getText().toString().trim());
+            if(savedId<0){
+                toast("تعذر حفظ الجرد");
+                savingAudit=false;
+                return;
+            }
+            new AlertDialog.Builder(this).setTitle("تم الحفظ بنجاح")
+                .setMessage("هل تريد بدء جرد جديد ومسح الحقول؟")
+                .setPositiveButton("نعم",(d,w)->{ savingAudit=false; showAudit(); })
+                .setNegativeButton("لا",(d,w)->savingAudit=false)
+                .setOnCancelListener(d->savingAudit=false)
+                .show();
+        }catch(Exception e){
+            savingAudit=false;
+            toast("تعذر حفظ الجرد");
+        }
     }
 
     void showArchive(){
