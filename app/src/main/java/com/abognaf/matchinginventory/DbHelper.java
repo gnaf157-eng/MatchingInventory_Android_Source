@@ -47,8 +47,31 @@ public class DbHelper extends SQLiteOpenHelper {
     }
 
     public long saveAudit(double[] h, double[] actual, double dieselBook, double petrolBook, String notes) {
+        long now = System.currentTimeMillis();
+
+        Cursor last = getReadableDatabase().rawQuery(
+            "SELECT id,created_at,t1_h,t2_h,t3_h,t4_h,diesel_book,petrol_book,notes FROM audits ORDER BY id DESC LIMIT 1", null);
+        try {
+            if (last.moveToFirst()) {
+                long lastTime = last.getLong(1);
+                String lastNotes = last.getString(8) == null ? "" : last.getString(8);
+                String newNotes = notes == null ? "" : notes;
+                boolean same = now-lastTime < 10000
+                    && Double.compare(last.getDouble(2), h[0])==0
+                    && Double.compare(last.getDouble(3), h[1])==0
+                    && Double.compare(last.getDouble(4), h[2])==0
+                    && Double.compare(last.getDouble(5), h[3])==0
+                    && Double.compare(last.getDouble(6), dieselBook)==0
+                    && Double.compare(last.getDouble(7), petrolBook)==0
+                    && lastNotes.equals(newNotes);
+                if (same) return last.getLong(0);
+            }
+        } finally {
+            last.close();
+        }
+
         ContentValues v = new ContentValues();
-        v.put("created_at", System.currentTimeMillis());
+        v.put("created_at", now);
         v.put("notes", notes == null ? "" : notes);
         double dieselActual=0, petrolActual=actual[3];
         for (int i=0;i<4;i++) {
