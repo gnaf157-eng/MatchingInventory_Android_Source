@@ -7,7 +7,7 @@ import java.util.*;
 
 public class DbHelper extends SQLiteOpenHelper {
     private static final String DB = "matching_inventory.db";
-    private static final int VER = 1;
+    private static final int VER = 2;
 
     public DbHelper(Context c) { super(c, DB, null, VER); }
 
@@ -15,6 +15,7 @@ public class DbHelper extends SQLiteOpenHelper {
         db.execSQL("CREATE TABLE tanks(id INTEGER PRIMARY KEY, name TEXT NOT NULL, fuel TEXT NOT NULL, length_cm REAL NOT NULL, diameter_cm REAL NOT NULL)");
         db.execSQL("CREATE TABLE audits(" +
                 "id INTEGER PRIMARY KEY AUTOINCREMENT," +
+                "audit_uid TEXT UNIQUE," +
                 "created_at INTEGER NOT NULL, notes TEXT," +
                 "t1_h REAL,t1_actual REAL,t1_book REAL,t1_diff REAL," +
                 "t2_h REAL,t2_actual REAL,t2_book REAL,t2_diff REAL," +
@@ -29,7 +30,12 @@ public class DbHelper extends SQLiteOpenHelper {
         db.execSQL("INSERT INTO tanks VALUES(4,'بترول','بترول',739,276)");
     }
 
-    @Override public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {}
+    @Override public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
+        if (oldVersion < 2) {
+            db.execSQL("ALTER TABLE audits ADD COLUMN audit_uid TEXT");
+            db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS idx_audits_uid ON audits(audit_uid)");
+        }
+    }
 
     public List<Tank> getTanks() {
         ArrayList<Tank> out = new ArrayList<>();
@@ -46,8 +52,15 @@ public class DbHelper extends SQLiteOpenHelper {
         getWritableDatabase().update("tanks", v, "id=?", new String[]{String.valueOf(t.id)});
     }
 
-    public long saveAudit(double[] h, double[] actual, double dieselBook, double petrolBook, String notes) {
+    public long saveAudit(String auditUid, double[] h, double[] actual, double dieselBook, double petrolBook, String notes) {
         long now = System.currentTimeMillis();
+
+        Cursor byUid = getReadableDatabase().rawQuery("SELECT id FROM audits WHERE audit_uid=? LIMIT 1", new String[]{auditUid});
+        try {
+            if (byUid.moveToFirst()) return byUid.getLong(0);
+        } finally {
+            byUid.close();
+        }
 
         Cursor last = getReadableDatabase().rawQuery(
             "SELECT id,created_at,t1_h,t2_h,t3_h,t4_h,diesel_book,petrol_book,notes FROM audits ORDER BY id DESC LIMIT 1", null);
@@ -71,6 +84,7 @@ public class DbHelper extends SQLiteOpenHelper {
         }
 
         ContentValues v = new ContentValues();
+        v.put("audit_uid", auditUid);
         v.put("created_at", now);
         v.put("notes", notes == null ? "" : notes);
         double dieselActual=0, petrolActual=actual[3];
