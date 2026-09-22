@@ -39,6 +39,7 @@ public class MainActivity extends Activity {
     static final int CREATE_DOC=501, PICK_LOGO=502, CREATE_PERIOD_PDF=503;
     long reportStart=0, reportEnd=Long.MAX_VALUE;
     boolean savingAudit=false;
+    String currentAuditUid=null;
 
     @Override public void onCreate(Bundle b){
         super.onCreate(b);
@@ -204,6 +205,7 @@ public class MainActivity extends Activity {
     }
 
     void showAudit(){
+        currentAuditUid=java.util.UUID.randomUUID().toString();
         clearPage(); renderBottom("الرئيسية"); tanks=db.getTanks(); addTopBar("بدء جرد جديد");
         LinearLayout steps=panel(); steps.setOrientation(LinearLayout.HORIZONTAL); steps.setGravity(Gravity.CENTER);
         String[] stepNames={"① المعلومات","② قراءات الخزانات","③ مراجعة"};
@@ -311,7 +313,7 @@ public class MainActivity extends Activity {
         }catch(Exception e){ toast("تحقق من الأرصدة الإجمالية"); return; }
         savingAudit=true;
         try{
-            long savedId=db.saveAudit(hv,av,dieselAccount,petrolAccount,notes.getText().toString().trim());
+            long savedId=db.saveAudit(currentAuditUid,hv,av,dieselAccount,petrolAccount,notes.getText().toString().trim());
             if(savedId<0){
                 toast("تعذر حفظ الجرد");
                 savingAudit=false;
