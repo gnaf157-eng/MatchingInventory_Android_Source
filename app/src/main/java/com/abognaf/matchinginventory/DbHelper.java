@@ -46,18 +46,25 @@ public class DbHelper extends SQLiteOpenHelper {
         getWritableDatabase().update("tanks", v, "id=?", new String[]{String.valueOf(t.id)});
     }
 
-    public long saveAudit(double[] h, double[] actual, double[] book, String notes) {
+    public long saveAudit(double[] h, double[] actual, double dieselBook, double petrolBook, String notes) {
         ContentValues v = new ContentValues();
         v.put("created_at", System.currentTimeMillis());
         v.put("notes", notes == null ? "" : notes);
-        double da=0, db=0, pa=actual[3], pb=book[3];
+        double dieselActual=0, petrolActual=actual[3];
         for (int i=0;i<4;i++) {
             int n=i+1;
-            v.put("t"+n+"_h",h[i]); v.put("t"+n+"_actual",actual[i]); v.put("t"+n+"_book",book[i]); v.put("t"+n+"_diff",actual[i]-book[i]);
-            if (i<3) { da += actual[i]; db += book[i]; }
+            v.put("t"+n+"_h",h[i]);
+            v.put("t"+n+"_actual",actual[i]);
+            v.put("t"+n+"_book",0);
+            v.put("t"+n+"_diff",0);
+            if (i<3) dieselActual += actual[i];
         }
-        v.put("diesel_actual",da); v.put("diesel_book",db); v.put("diesel_diff",da-db);
-        v.put("petrol_actual",pa); v.put("petrol_book",pb); v.put("petrol_diff",pa-pb);
+        v.put("diesel_actual",dieselActual);
+        v.put("diesel_book",dieselBook);
+        v.put("diesel_diff",dieselActual-dieselBook);
+        v.put("petrol_actual",petrolActual);
+        v.put("petrol_book",petrolBook);
+        v.put("petrol_diff",petrolActual-petrolBook);
         return getWritableDatabase().insertOrThrow("audits", null, v);
     }
 
